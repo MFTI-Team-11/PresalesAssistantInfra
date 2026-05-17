@@ -1,0 +1,124 @@
+services:
+  db_auth:
+    image: postgres:15
+    env_file: ./secrets/db_auth.env
+    volumes:
+      - db_auth_data:/var/lib/postgresql/data
+    ports:
+      - "15433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: always
+
+  db_presale:
+    image: postgres:15
+    env_file: ./secrets/db_presale.env
+    volumes:
+      - db_presale_data:/var/lib/postgresql/data
+    ports:
+      - "15434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: always
+
+  db_ai:
+    image: postgres:15
+    env_file: ./secrets/db_ai.env
+    volumes:
+      - db_ai_data:/var/lib/postgresql/data
+    ports:
+      - "15435:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: always
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    env_file: ./secrets/minio.env
+    volumes:
+      - minio_data:/data
+    ports:
+      - "19000:9000"
+      - "19001:9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: always
+
+  auth_service:
+    build:
+      context: ${BACKEND_DIR:?Set BACKEND_DIR in infra/.env}
+      dockerfile: services/auth_service/Dockerfile
+    env_file: ./secrets/auth_service.env
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--root-path", "/auth_service"]
+    depends_on:
+      db_auth:
+        condition: service_healthy
+    restart: always
+
+  presale_service:
+    build:
+      context: ${BACKEND_DIR:?Set BACKEND_DIR in infra/.env}
+      dockerfile: services/presale_service/Dockerfile
+    env_file: ./secrets/presale_service.env
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8002", "--root-path", "/presale_service"]
+    depends_on:
+      db_presale:
+        condition: service_healthy
+      ai_service:
+        condition: service_started
+    restart: always
+
+  ai_service:
+    build:
+      context: ${BACKEND_DIR:?Set BACKEND_DIR in infra/.env}
+      dockerfile: services/ai_service/Dockerfile
+    env_file: ./secrets/ai_service.env
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8003", "--root-path", "/ai_service"]
+    depends_on:
+      db_ai:
+        condition: service_healthy
+    restart: always
+
+  frontend:
+    build:
+      context: ${FRONTEND_DIR:?Set FRONTEND_DIR in infra/.env}
+      dockerfile: Dockerfile
+    env_file: ./secrets/frontend.env
+    depends_on:
+      - auth_service
+      - presale_service
+      - ai_service
+    restart: always
+
+  nginx:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    ports:
+      - "8088:8088"
+    depends_on:
+      - frontend
+      - auth_service
+      - presale_service
+      - ai_service
+      - minio
+    restart: always
+
+volumes:
+  db_auth_data:
+  db_presale_data:
+  db_ai_data:
+  minio_data:

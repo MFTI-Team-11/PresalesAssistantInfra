@@ -1,0 +1,40 @@
+# Secrets
+infra/secrets/*.env
+infra/secrets/keys/
+!infra/secrets/*.env.example
+
+# Local environment
+.env
+.env.*
+*.env
+!*.env.example
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+*.err.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docker/local overrides
+docker-compose.override.yml
+docker-compose.local.yml
+*.local.yml
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp

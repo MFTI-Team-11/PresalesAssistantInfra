@@ -1,0 +1,91 @@
+services:
+  db_auth:
+    volumes:
+      - db_auth_dev_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  db_presale:
+    volumes:
+      - db_presale_dev_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  db_ai:
+    volumes:
+      - db_ai_dev_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  minio:
+    volumes:
+      - minio_dev_data:/data
+    restart: unless-stopped
+
+  auth_service:
+    working_dir: /app/services/auth_service
+    environment:
+      PYTHONPATH: /app
+    volumes:
+      - ${BACKEND_DIR:?Set BACKEND_DIR in infra/.env}/shared:/app/shared
+      - ${BACKEND_DIR:?Set BACKEND_DIR in infra/.env}/services/auth_service/app:/app/services/auth_service/app
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--root-path", "/auth_service", "--reload", "--reload-dir", "/app/services/auth_service/app", "--reload-dir", "/app/shared"]
+    restart: unless-stopped
+
+  presale_service:
+    working_dir: /app/services/presale_service
+    environment:
+      PYTHONPATH: /app
+    volumes:
+      - ${BACKEND_DIR:?Set BACKEND_DIR in infra/.env}/shared:/app/shared
+      - ${BACKEND_DIR:?Set BACKEND_DIR in infra/.env}/services/presale_service/app:/app/services/presale_service/app
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8002", "--root-path", "/presale_service", "--reload", "--reload-dir", "/app/services/presale_service/app", "--reload-dir", "/app/shared"]
+    restart: unless-stopped
+
+  ai_service:
+    working_dir: /app/services/ai_service
+    environment:
+      PYTHONPATH: /app
+    volumes:
+      - ${BACKEND_DIR:?Set BACKEND_DIR in infra/.env}/shared:/app/shared
+      - ${BACKEND_DIR:?Set BACKEND_DIR in infra/.env}/services/ai_service/app:/app/services/ai_service/app
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8003", "--root-path", "/ai_service", "--reload", "--reload-dir", "/app/services/ai_service/app", "--reload-dir", "/app/shared"]
+    restart: unless-stopped
+
+  frontend:
+    build: !override
+      context: ${FRONTEND_DIR:?Set FRONTEND_DIR in infra/.env}
+      dockerfile_inline: |
+        FROM node:24-alpine
+
+        WORKDIR /app
+        RUN corepack enable
+
+        COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+        RUN pnpm install --frozen-lockfile
+
+        EXPOSE 3000
+
+        CMD ["pnpm", "dev"]
+    environment:
+      CI: "true"
+      NODE_ENV: development
+      NEXT_TELEMETRY_DISABLED: "1"
+      npm_config_confirm_modules_purge: "false"
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+    env_file: ./secrets/frontend.env
+    volumes:
+      - ${FRONTEND_DIR:?Set FRONTEND_DIR in infra/.env}:/app
+      - frontend_dev_node_modules:/app/node_modules
+      - frontend_dev_next:/app/.next
+    command: ["pnpm", "dev"]
+    restart: unless-stopped
+
+  nginx:
+    restart: unless-stopped
+
+volumes:
+  db_auth_dev_data:
+  db_presale_dev_data:
+  db_ai_dev_data:
+  minio_dev_data:
+  frontend_dev_node_modules:
+  frontend_dev_next:
