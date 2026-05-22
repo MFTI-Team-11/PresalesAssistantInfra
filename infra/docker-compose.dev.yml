@@ -9,11 +9,6 @@ services:
       - db_presale_dev_data:/var/lib/postgresql/data
     restart: unless-stopped
 
-  db_ai:
-    volumes:
-      - db_ai_dev_data:/var/lib/postgresql/data
-    restart: unless-stopped
-
   minio:
     volumes:
       - minio_dev_data:/data
@@ -85,7 +80,6 @@ services:
 volumes:
   db_auth_dev_data:
   db_presale_dev_data:
-  db_ai_dev_data:
   minio_dev_data:
   frontend_dev_node_modules:
   frontend_dev_next:

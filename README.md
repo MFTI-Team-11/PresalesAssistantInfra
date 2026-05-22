@@ -25,7 +25,6 @@ cd secrets
 
 Copy-Item ai_service.env.example ai_service.env
 Copy-Item auth_service.env.example auth_service.env
-Copy-Item db_ai.env.example db_ai.env
 Copy-Item db_auth.env.example db_auth.env
 Copy-Item db_presale.env.example db_presale.env
 Copy-Item frontend.env.example frontend.env
@@ -80,7 +79,6 @@ Services:
 - AI API: `http://localhost:8088/ai_service/docs`
 - Auth DB: `localhost:15433`
 - Presale DB: `localhost:15434`
-- AI DB: `localhost:15435`
 - MinIO API: `http://localhost:19000`
 - MinIO Console: `http://localhost:19001`
 
